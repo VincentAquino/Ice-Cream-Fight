@@ -1,0 +1,1247 @@
+<!DOCTYPE HTML>
+<html>
+    <head>
+        <link rel="preconnect" href="https://fonts.googleapis.com">
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link href="https://fonts.googleapis.com/css2?family=VT323&display=swap" rel="stylesheet">
+        <style>
+            *{
+                margin: 0;
+                padding: 0;
+                font-family: 'VT323', monospace;
+            }
+            #myCanvas{
+                background-color: gray;
+                width: 900px;
+                height: 900px;
+                position: absolute;
+                left: 50%;
+                top: 50%;
+                transform: translate(-50%, -50%);
+                border: none;
+                border: 5px solid black;
+            }
+            .hide{
+                display: none; /**/
+            }
+            #beach{
+                width: 900px;
+                height: 900px;
+                image-rendering: pixelated;
+            }
+            body{
+                background-color: cadetblue;
+                cursor: auto;
+            }
+        </style>
+    </head>
+    <body>
+        <canvas id="myCanvas"></canvas>
+        <img src="imgs/beach.png" class="hide" id="beach">
+        <img src="imgs/icecream.png" class="hide" id="icecream">
+        <img src="imgs/pineapple.png" class="hide" id="pineapple">
+        <img src="imgs/icIcon.png" class="hide" id="scoops">
+        <img src="imgs/bear.png" class="hide" id="bear">
+        <img src='imgs/icecreamicon.png' class="hide" id="icecreamicon">
+        <img src="imgs/coin.png" class="hide" id="coin">
+        <img src="imgs/select.png" class="hide" id="select">
+        <img src="imgs/blob1.png" class="hide" id="blob1">
+        <img src="imgs/blob2.png" class="hide" id="blob2">
+        <img src="imgs/tpose.png" class="hide" id="tpose">
+        <script>
+            //setup Canvas
+            var canvas = document.getElementById("myCanvas");
+            var ctx = canvas.getContext("2d");
+            canvas.width = 900;
+            canvas.height = 900;
+            //mouse positioning
+            var mousePos = {
+                x: 0,
+                y: 0
+            };
+            document.onmousemove = handleMouseMove;
+            function handleMouseMove(event) {
+                var dot, eventDoc, doc, body, pageX, pageY;
+                event = event || window.event;
+                if (event.pageX == null && event.clientX != null) {
+                    eventDoc = (event.target && event.target.ownerDocument) || document;
+                    doc = eventDoc.documentElement;
+                    body = eventDoc.body;
+
+                    event.pageX = event.clientX +
+                      (doc && doc.scrollLeft || body && body.scrollLeft || 0) -
+                      (doc && doc.clientLeft || body && body.clientLeft || 0);
+                    event.pageY = event.clientY +
+                      (doc && doc.scrollTop  || body && body.scrollTop  || 0) -
+                      (doc && doc.clientTop  || body && body.clientTop  || 0 );
+                }
+                mousePos = {
+                    x: event.pageX - canvas.getBoundingClientRect().left,
+                    y: event.pageY - canvas.getBoundingClientRect().top
+                };
+            }
+            
+            //variables and objects
+            var beach = document.getElementById("beach");
+            var icecream = document.getElementById("icecream");
+            var pineapple = document.getElementById("pineapple");
+            var scoops = document.getElementById("scoops");
+            var bear = document.getElementById("bear");
+            var icecreamicon = document.getElementById("icecreamicon");
+            var coin = document.getElementById("coin");
+            var select = document.getElementById("select");
+            var blob1 = document.getElementById("blob1");
+            var blob2 = document.getElementById("blob2");
+            var tpose = document.getElementById("tpose");
+            var groundColor = "#D2B48C";
+            var gamePlayer = new player(225-40, 900-80, 80, 80, pineapple);
+            var gameEnemy = new enemy(450+225+40, 900-80, 80, 80, bear);
+            var playerGun = new gun(gamePlayer.x, gamePlayer.y, 50, 10, 10, 20, "black");
+            var enemyGun = new enemygun(gameEnemy.x, gameEnemy.y, 50, 10, 10, 20, "black");
+            var leftPlatform = new platforms(0, 250, 200, 5, "black");
+            var rightPlatform = new platforms(700, 250, 200, 5, "black");
+            var midPlatform = new platforms(300, 600, 300, 5, "black");
+            var ammoBox = new ammoDrop(Math.floor(Math.random() * 820), -80, 80, 80, scoops);
+            var coinBox = new coinDrop(Math.floor(Math.random() * 820), -80, 80, 80, coin);
+            var playBtn = new button(325, 300, 250, 100, "Play", "cadetblue");
+            var settBtn = new button(325, 450, 250, 100, "Controls", "white");
+            var statBtn = new button(325, 600, 250, 100, "Stats", "white");
+            var custBtn = new button(325, 750, 250, 100, "Customize", "white");
+            var homeBtn = new button(325, 500, 250, 100, "Home", "white");
+            var statHomeBtn = new button(20, 780, 250, 100, "Home", "white");
+            var settHomeBtn = new button(20, 780, 250, 100, "Home", "white");
+            var custHomeBtn = new button(20, 780, 250, 100, "Home", "white");
+            var wins = 0;
+            var loses = 0;
+            var bulletsShot = 0;
+            var bulletsHit = 0;
+            var accuracy = Math.floor(bulletsHit/bulletsShot)*100;
+            var losers = "";
+            
+            //location of barrel to shoot from
+            var newX = 0;
+            var newY = 0;
+            var newX2 = 0;
+            var newY2 = 0;
+            var d = 25+gamePlayer.width;
+            var d2 = 50;
+            function barrelLocation(){
+                newX = gamePlayer.x+gamePlayer.width/2 + (d * Math.cos(playerGun.angle));
+                newY = gamePlayer.y+gamePlayer.height/2 + (d * Math.sin(playerGun.angle));
+                var newAngle = ((playerGun.angle + 95.8) % 360);
+                newX2 = newX + (d2 * Math.cos(newAngle));
+                newY2 = newY + (d2 * Math.sin(newAngle));
+            }
+            var enewX = 0;
+            var enewY = 0;
+            var enewX2 = 0;
+            var enewY2 = 0;
+            var ed = 25+gameEnemy.width;
+            var ed2 = 50;
+            function enemybarrelLocation(){
+                enewX = gameEnemy.x+gameEnemy.width/2 + (ed * Math.cos(enemyGun.angle));
+                enewY = gameEnemy.y+gameEnemy.height/2 + (ed * Math.sin(enemyGun.angle));
+                var newAngle2 = ((enemyGun.angle + 95.8) % 360);
+                enewX2 = enewX + (ed2 * Math.cos(newAngle2));
+                enewY2 = enewY + (ed2 * Math.sin(newAngle2));
+            }
+            
+            //object functions
+            function background(x, y, width, height){
+                var blackX = width - 200;
+                var blackY = height - 200;
+                ctx.fillStyle = "black";
+                ctx.fillRect(blackX, blackY, width + 400, height + 400);
+                ctx.imageSmoothingEnabled = false;
+                ctx.drawImage(beach, x, y, width, height);
+            }
+            function player(x, y, width, height, image){
+                this.x = x;
+                this.y = y;
+                this.width = width;
+                this.height = height;
+                this.image = image;
+                this.health = 100;
+                this.ammo = 30;
+                this.speedX = 0;
+                this.speedY = 0;
+                this.gravity = 0.05;
+                this.gravitySpeed = 0;
+                this.grounded = true;
+                this.jumpCount = 0;
+                this.coins = 0;
+                this.update = function(){
+                    ctx = canvas.getContext("2d");
+                    ctx.drawImage(this.image, this.x, this.y, this.width, this.height);
+                }
+                this.movement = function(){
+                    if(this.y < 900-80){
+                        this.gravitySpeed += this.gravity;   
+                    }
+                    if(this.y >= 900-80 && -1*this.gravitySpeed < this.speedY){
+                        this.gravitySpeed = 0;
+                        this.speedY = 0;
+                        this.grounded = true;
+                        this.jumpCount = 0;
+                    }
+                    if(this.x < 0){
+                        this.x = 0;
+                    }
+                    if(this.x+this.width> 900){
+                        this.x = 900-this.width;
+                    }
+                    if(this.y < 0){
+                        this.y = 0;
+                    }
+                    this.x += this.speedX;
+                    this.y += this.speedY + this.gravitySpeed;
+                }
+                this.detectPlatforms = function(){
+                    if(this.y+this.height > leftPlatform.y && this.y + this.height < leftPlatform.y + leftPlatform.height && this.x+this.width > leftPlatform.x && this.x < leftPlatform.x+leftPlatform.width){
+                        this.y = leftPlatform.y - this.height;
+                        this.gravitySpeed = 0;
+                        this.speedY = 0;
+                        this.grounded = true;
+                        this.jumpCount = 0;
+                    }
+                    if(this.y+this.height > rightPlatform.y && this.y + this.height < rightPlatform.y + rightPlatform.height && this.x+this.width > rightPlatform.x && this.x < rightPlatform.x+rightPlatform.width){
+                        this.y = rightPlatform.y - this.height;
+                        this.gravitySpeed = 0;
+                        this.speedY = 0;
+                        this.grounded = true;
+                        this.jumpCount = 0;
+                    }
+                    if(this.y+this.height > midPlatform.y && this.y + this.height < midPlatform.y + midPlatform.height && this.x+this.width > midPlatform.x && this.x < midPlatform.x+midPlatform.width){
+                        this.y = midPlatform.y - this.height;
+                        this.gravitySpeed = 0;
+                        this.speedY = 0;
+                        this.grounded = true;
+                        this.jumpCount = 0;
+                    }
+                }
+            }
+            function gun(x,y, barrelWidth, barrelHeight, handleWidth, handleHeight, color){
+                this.x = x;
+                this.y = y;
+                this.barrelWidth = barrelWidth;
+                this.barrelHeight = barrelHeight;
+                this.handleWidth = handleWidth;
+                this.handleHeight = handleHeight;
+                this.color = color;
+                this.angle = 0;
+                this.update = function(){
+                    ctx = canvas.getContext("2d");
+                    ctx.save();
+                    ctx.translate(gamePlayer.x+gamePlayer.width/2, gamePlayer.y+gamePlayer.height/2);
+                    
+                    var dx = mousePos.x - (gamePlayer.x+gamePlayer.width/2);
+                    var dy = mousePos.y - (gamePlayer.y+gamePlayer.height/2);
+                    this.angle = Math.atan2(dy, dx);
+                    ctx.rotate(this.angle);
+                    
+                    ctx.drawImage(icecream, gamePlayer.width/2, gamePlayer.height/2);
+                    ctx.restore();
+                }
+            }
+            function bullet(x, y, r, color, mx, my){
+                this.x = x;
+                this.y = y;
+                this.r = r;
+                this.velX = 0;
+                this.velY = 0;
+                this.tx = 0;
+                this.ty = 0;
+                this.mx = mx;
+                this.my = my;
+                this.dist = 0;
+                this.speed = 10;
+                this.color = color;
+                this.delete = false;
+                this.boxX = 0;
+                this.boxY = 0;
+                this.d = this.r*2;
+                this.update = function(){
+                    if(this.delete == false){
+                        barrelLocation();
+                        ctx = canvas.getContext("2d");
+                        ctx.beginPath();
+                        ctx.arc(this.x, this.y, this.r+1, 0, 2 * Math.PI, false);
+                        ctx.fillStyle = "black";
+                        ctx.fill();
+                        ctx.beginPath();
+                        ctx.arc(this.x, this.y, this.r, 0, 2 * Math.PI, false);
+                        ctx.fillStyle = this.color;
+                        ctx.fill();
+                    
+                        this.tx = this.mx - this.x;
+                        this.ty = this.my - this.y;
+                        this.dist = Math.sqrt(this.tx * this.tx + this.ty * this.ty);
+                        
+                        if(this.dist >= this.speed){
+                            this.velX = (this.tx / this.dist) * this.speed;
+                            this.velY = (this.ty / this.dist) * this.speed;
+                            this.x += this.velX;
+                            this.y += this.velY; 
+                        }
+                        if(this.dist < this.speed){
+                            this.delete = true;
+                        }
+                    }
+                }
+                this.detect = function(){
+                    this.boxX = this.x - this.r;
+                    this.boxY = this.y - this.r;
+                    if(this.boxX < gamePlayer.x + gamePlayer.width && this.boxX + this.d > gamePlayer.x && this.boxY + this.d > gamePlayer.y && this.boxY < gamePlayer.y + gamePlayer.height){
+                        gamePlayer.health -= 2;
+                        this.delete = true;
+                        this.x = -100;
+                        this.y = -100;
+                        this.boxX = -100;
+                        this.boxY = -100;
+                    }
+                    if(this.boxX < gameEnemy.x + gameEnemy.width && this.boxX + this.d > gameEnemy.x && this.boxY + this.d > gameEnemy.y && this.boxY < gameEnemy.y + gameEnemy.height){
+                        gameEnemy.health -= 2;
+                        this.delete = true;
+                        this.x = -100;
+                        this.y = -100;
+                        this.boxX = -100;
+                        this.boxY = -100;
+                        bulletsHit += 1;
+                    }
+                }
+            }
+            function enemy(x, y, width, height, image){
+                this.x = x;
+                this.y = y;
+                this.width = width;
+                this.height = height;
+                this.image = image;
+                this.health = 100;
+                this.ammo = 30;
+                this.speedX = 0;
+                this.speedY = 0;
+                this.gravity = 0.05;
+                this.gravitySpeed = 0;
+                this.grounded = true;
+                this.jumpCount = 0;
+                this.randX = 3.0*Math.ceil(Math.floor(Math.random() * 820)/3.0)+1;
+                this.randY = 0;
+                this.randPercent = 90;
+                this.randAction = Math.floor(Math.random() * this.randPercent);
+                this.update = function(){
+                    ctx = canvas.getContext("2d");
+                    ctx.drawImage(this.image, this.x, this.y, this.width, this.height);
+                }
+                this.movement = function(){
+                    if(this.y < 900-80){
+                        this.gravitySpeed += this.gravity;   
+                    }
+                    if(this.y >= 900-80 && -1*this.gravitySpeed < this.speedY){
+                        this.gravitySpeed = 0;
+                        this.speedY = 0;
+                        this.grounded = true;
+                        this.jumpCount = 0;
+                    }
+                    if(this.x < 0){
+                        this.x = 0;
+                    }
+                    if(this.x+this.width> 900){
+                        this.x = 900-this.width;
+                    }
+                    if(this.y < 0){
+                        this.y = 0;
+                    }
+                    this.x += this.speedX;
+                    this.y += this.speedY + this.gravitySpeed;
+                    
+                    if(this.x < this.randX){
+                        this.speedX = 3;
+                    }
+                    if(this.x > this.randX){
+                        this.speedX = -3;
+                    }
+                    if(this.x == this.randX || this.x == this.randX - 1 || this.x == this.randX - 2){
+                        this.randX = 3.0*Math.ceil(Math.floor(Math.random() * 820)/3.0)+1;
+                    }
+                    
+                    for(var v = this.randPercent*2/3-1; v < this.randPercent*2/3-1+this.randPercent*1/3; v++){
+                        if(this.randAction == v){
+                            this.grounded = false;
+                            this.speedY = -6;
+                            this.randAction = Math.floor(Math.random() * this.randPercent);
+                        }   
+                    }
+                    for(var v = 0; v < this.randPercent*2/3-1; v++){
+                        if(this.randAction == v){
+                            this.randAction = Math.floor(Math.random() * this.randPercent);
+                        }   
+                    }
+                    if(this.randAction == this.randPercent-1 && this.ammo > 0){
+                        var eint = ebulletList.length + 1;
+                        var estr = "ebullet" + eint;
+                        eicColorN = Math.floor(Math.random() * 3);
+                        if(eicColorN == 0){
+                            eicColor = "yellow";
+                        }
+                        if(eicColorN == 1){
+                            eicColor = "#14a3c7";
+                        }
+                        if(eicColorN == 2){
+                            eicColor = "#B399D4";
+                        }
+                        window[estr] = new bullet(enewX2, enewY2, 5, eicColor, gamePlayer.x+40, gamePlayer.y+40);
+                        ebulletList.push(window[estr]);
+                        gameEnemy.ammo -= 1;
+                        this.randAction = Math.floor(Math.random() * this.randPercent);
+                        
+                        if(this.grounded == false && enemyGun.angle < 2 && enemyGun.angle > 1 && this.jumpCount < 3 && gamePlayer.ammo > 0){
+                            this.jumpCount += 1;
+                            this.speedY -= 2;
+                        }
+                    }
+                    if(this.randAction == this.randPercent-1 && this.ammo <= 0){
+                        this.randAction = Math.floor(Math.random() * this.randPercent);
+                    }
+                }
+                this.detectPlatforms = function(){
+                    if(this.y+this.height > leftPlatform.y && this.y + this.height < leftPlatform.y + leftPlatform.height && this.x+this.width > leftPlatform.x && this.x < leftPlatform.x+leftPlatform.width){
+                        this.y = leftPlatform.y - this.height;
+                        this.gravitySpeed = 0;
+                        this.speedY = 0;
+                        this.grounded = true;
+                        this.jumpCount = 0;
+                    }
+                    if(this.y+this.height > rightPlatform.y && this.y + this.height < rightPlatform.y + rightPlatform.height && this.x+this.width > rightPlatform.x && this.x < rightPlatform.x+rightPlatform.width){
+                        this.y = rightPlatform.y - this.height;
+                        this.gravitySpeed = 0;
+                        this.speedY = 0;
+                        this.grounded = true;
+                        this.jumpCount = 0;
+                    }
+                    if(this.y+this.height > midPlatform.y && this.y + this.height < midPlatform.y + midPlatform.height && this.x+this.width > midPlatform.x && this.x < midPlatform.x+midPlatform.width){
+                        this.y = midPlatform.y - this.height;
+                        this.gravitySpeed = 0;
+                        this.speedY = 0;
+                        this.grounded = true;
+                        this.jumpCount = 0;
+                    }
+                }
+                this.healthBar = function (){
+                    if(this.health < 100){
+                        ctx.fillStyle = "black";
+                        ctx.fillRect(this.x-14,this.y-5-34, 104,34);
+                        ctx.fillStyle = "#FFCCCB";
+                        ctx.fillRect(this.x-14+2,this.y-5-34+2, this.health,30);
+                    }
+                }
+            }
+            function enemygun(x,y, barrelWidth, barrelHeight, handleWidth, handleHeight, color){
+                this.x = x;
+                this.y = y;
+                this.barrelWidth = barrelWidth;
+                this.barrelHeight = barrelHeight;
+                this.handleWidth = handleWidth;
+                this.handleHeight = handleHeight;
+                this.color = color;
+                this.angle = 0;
+                this.update = function(){
+                    ctx = canvas.getContext("2d");
+                    ctx.save();
+                    ctx.translate(gameEnemy.x+gameEnemy.width/2, gameEnemy.y+gameEnemy.height/2);
+                    
+                    var dx2 = gamePlayer.x+40 - (gameEnemy.x+gameEnemy.width/2);
+                    var dy2 = gamePlayer.y+40 - (gameEnemy.y+gameEnemy.height/2);
+                    this.angle = Math.atan2(dy2, dx2);
+                    ctx.rotate(this.angle);
+                    
+                    ctx.drawImage(icecream, gameEnemy.width/2, gameEnemy.height/2);
+                    ctx.restore();
+                }
+            }
+            function platforms(x, y, width, height, color){
+                this.x = x;
+                this.y = y;
+                this.width = width;
+                this.height = height;
+                this.color = color;
+                this.update = function(){
+                    ctx.fillStyle = this.color;
+                    ctx.fillRect(this.x, this.y, this.width, this.height);
+                }
+            }
+            function ammoDrop(x, y, width, height, image){
+                this.x = x;
+                this.y = y;
+                this.speedY = 0;
+                this.width = width;
+                this.height = height;
+                this.image = image;
+                this.grounded = false;
+                this.update = function(){
+                    ctx.drawImage(this.image, this.x, this.y, this.width, this.height);
+                    if(this.grounded == false){
+                        this.speedY = 3;
+                    }
+                    if(this.y + this.height > 900){
+                        this.grounded = true;
+                        this.y = 900 - this.height;
+                    }
+                    this.y += this.speedY;
+                }
+                this.detectPlatforms = function(){
+                    if(this.y+this.height > leftPlatform.y && this.y + this.height < leftPlatform.y + leftPlatform.height && this.x+this.width > leftPlatform.x && this.x < leftPlatform.x+leftPlatform.width){
+                        this.y = leftPlatform.y - this.height;
+                        this.grounded = true;
+                    }
+                    if(this.y+this.height > rightPlatform.y && this.y + this.height < rightPlatform.y + rightPlatform.height && this.x+this.width > rightPlatform.x && this.x < rightPlatform.x+rightPlatform.width){
+                        this.y = rightPlatform.y - this.height;
+                        this.grounded = true;
+                    }
+                    if(this.y+this.height > midPlatform.y && this.y + this.height < midPlatform.y + midPlatform.height && this.x+this.width > midPlatform.x && this.x < midPlatform.x+midPlatform.width){
+                        this.y = midPlatform.y - this.height;
+                        this.grounded = true;
+                    }
+                }
+                this.detect = function(){
+                    if(this.x < gamePlayer.x + gamePlayer.width && this.x + this.width > gamePlayer.x && this.y < gamePlayer.y + gamePlayer.width && this.y + this.height > gamePlayer.y){
+                        gamePlayer.ammo += 30;
+                        this.x = Math.floor(Math.random() * 820);
+                        this.y = -80;
+                        this.grounded = false;
+                    }
+                    if(this.x < gameEnemy.x + gameEnemy.width && this.x + this.width > gameEnemy.x && this.y < gameEnemy.y + gameEnemy.width && this.y + this.height > gameEnemy.y){
+                        gameEnemy.ammo += 30;
+                        this.x = Math.floor(Math.random() * 820);
+                        this.y = -80;
+                        this.grounded = false;
+                    }
+                }
+            }
+            function coinDrop(x, y, width, height, image){
+                this.x = x+5;
+                this.y = y+5;
+                this.speedY = 0;
+                this.width = width-10;
+                this.height = height-10;
+                this.image = image;
+                this.grounded = false;
+                this.deploy = false;
+                this.update = function(){
+                    ctx.drawImage(this.image, this.x, this.y, this.width, this.height);
+                    if(this.grounded == false){
+                        this.speedY = 3;
+                    }
+                    if(this.y + this.height > 900){
+                        this.grounded = true;
+                        this.y = 900 - this.height;
+                    }
+                    this.y += this.speedY;
+                }
+                this.detectPlatforms = function(){
+                    if(this.y+this.height > leftPlatform.y && this.y + this.height < leftPlatform.y + leftPlatform.height && this.x+this.width > leftPlatform.x && this.x < leftPlatform.x+leftPlatform.width){
+                        this.y = leftPlatform.y - this.height;
+                        this.grounded = true;
+                    }
+                    if(this.y+this.height > rightPlatform.y && this.y + this.height < rightPlatform.y + rightPlatform.height && this.x+this.width > rightPlatform.x && this.x < rightPlatform.x+rightPlatform.width){
+                        this.y = rightPlatform.y - this.height;
+                        this.grounded = true;
+                    }
+                    if(this.y+this.height > midPlatform.y && this.y + this.height < midPlatform.y + midPlatform.height && this.x+this.width > midPlatform.x && this.x < midPlatform.x+midPlatform.width){
+                        this.y = midPlatform.y - this.height;
+                        this.grounded = true;
+                    }
+                }
+                this.detect = function(){
+                    if(this.x < gamePlayer.x + gamePlayer.width && this.x + this.width > gamePlayer.x && this.y < gamePlayer.y + gamePlayer.width && this.y + this.height > gamePlayer.y){
+                        gamePlayer.coins += 10;
+                        this.x = Math.floor(Math.random() * 820);
+                        this.y = -80;
+                        this.grounded = false;
+                        this.deploy = false;
+                    }
+                    if(this.x < gameEnemy.x + gameEnemy.width && this.x + this.width > gameEnemy.x && this.y < gameEnemy.y + gameEnemy.width && this.y + this.height > gameEnemy.y){
+                        this.x = Math.floor(Math.random() * 820);
+                        this.y = -80;
+                        this.grounded = false;
+                        this.deploy = false;
+                    }
+                }
+            }
+            function endGame(loser){
+                gamePlayer.x = -100;
+                gameEnemy.x = -100;
+                start = false;
+                if(loser == "player"){
+                    ctx.fillStyle = "#D0312D";
+                    ctx.fillRect(0,0,900,900);
+                    ctx.font = "100px VT323";
+                    ctx.textAlign = "center"
+                    ctx.fillStyle = "black";
+                    ctx.fillText("Player 2 Wins!", 450, 450);
+                    homeBtn.update();
+                    homeBtn.detectMouse();
+                    losers = "player";
+                }
+                if(loser == "enemy"){
+                    ctx.fillStyle = "skyblue";
+                    ctx.fillRect(0,0,900,900);
+                    ctx.font = "100px VT323";
+                    ctx.textAlign = "center";
+                    ctx.fillStyle = "black";
+                    ctx.fillText("Player 1 Wins!", 450, 450);
+                    homeBtn.update();
+                    homeBtn.detectMouse();
+                    losers = "enemy";
+                }
+            }
+            function UI(){
+                ctx.fillStyle = "black";
+                ctx.fillRect(10, 10, 154, 54);
+                ctx.fillStyle = "#FFCCCB";
+                ctx.fillRect(12, 12, gamePlayer.health*1.5, 50);
+                ctx.fillStyle = "red";
+                ctx.fillRect(30, 22, 9, 30);
+                ctx.fillRect(19.5, 32.5, 30, 9);
+                ctx.font = "50px VT323";
+                ctx.textAlign = "center"
+                ctx.fillText(gamePlayer.health, 100, 52);
+                ctx.fillStyle = "#8859c4";
+                ctx.drawImage(scoops, 0, 60, 80, 80);
+                ctx.fillText(gamePlayer.ammo, 100, 120);
+                ctx.drawImage(coin, 12, 150, 50, 50);
+                ctx.fillText(gamePlayer.coins, 100, 190);
+            }
+            function button(x, y, width, height, text, color){
+                this.x = x;
+                this.y = y;
+                this.width = width;
+                this.height = height;
+                this.inside = false;
+                this.borderWidth = 4;
+                this.text = text;
+                this.color1 = "black";
+                this.color2 = color;
+                this.update = function(){
+                    ctx.fillStyle = this.color1;
+                    ctx.fillRect(this.x, this.y, this.width, this.height);
+                    ctx.fillStyle = this.color2;
+                    ctx.fillRect(this.x + this.borderWidth, this.y + this.borderWidth, this.width - this.borderWidth*2, this.height - this.borderWidth*2);
+                    
+                    ctx.font = "50px VT323";
+                    ctx.textAlign = "center";
+                    ctx.fillStyle = this.color1;
+                    ctx.fillText(this.text, this.x + this.width/2, this.y + this.height/2 + 15);
+                }
+                this.detectMouse = function(){
+                    if(mousePos.x > this.x && mousePos.x < this.x + this.width && mousePos.y > this.y && mousePos.y < this.y + this.height){
+                        this.color1 = color;
+                        this.color2 = "black";
+                        this.inside = true;
+                    }
+                    else{
+                        this.color1 = "black";
+                        this.color2 = color;
+                        this.inside = false;
+                    }
+                }
+            }
+            function mainScreen(){
+                ctx.imageSmoothingEnabled = false;
+                ctx.drawImage(beach, 0, 0, 900, 900);
+                
+                ctx.font = "120px VT323";
+                ctx.textAlign = "center";
+                ctx.fillStyle = "black";
+                ctx.fillText("Ice Cream F ght!", 446,196);
+                ctx.font = "120px VT323";
+                ctx.textAlign = "center";
+                ctx.fillStyle = "white";
+                ctx.fillText("Ice Cream F ght!", 450, 200);
+                
+                ctx.drawImage(icecreamicon, 600, 130, 34, 70);
+                
+                playBtn.detectMouse();
+                playBtn.update();
+                settBtn.detectMouse();
+                settBtn.update();
+                statBtn.detectMouse();
+                statBtn.update();
+                custBtn.detectMouse();
+                custBtn.update();
+            }
+            function statScreen(){
+                accuracy = Math.floor((bulletsHit/bulletsShot)*100);
+                ctx.imageSmoothingEnabled = false;
+                ctx.drawImage(beach, 0, 0, 900, 900);
+                
+                ctx.font = "120px VT323";
+                ctx.textAlign = "center";
+                ctx.fillStyle = "black";
+                ctx.fillText("Stats", 446,196);
+                ctx.font = "120px VT323";
+                ctx.textAlign = "center";
+                ctx.fillStyle = "white";
+                ctx.fillText("Stats", 450, 200);
+                
+                ctx.font = "80px VT323";
+                ctx.textAlign = "center";
+                ctx.fillStyle = "black";
+                ctx.fillText("Player Wins: " + wins, 450, 300);
+                ctx.fillText("Player Losses: " + loses, 450, 450);
+                ctx.fillText("Player Accuracy: " + accuracy + "%", 450, 600);
+                
+                statHomeBtn.detectMouse();
+                statHomeBtn.update();
+            }
+            function settingScreen(){
+                ctx.imageSmoothingEnabled = false;
+                ctx.drawImage(beach, 0, 0, 900, 900);
+                
+                ctx.font = "120px VT323";
+                ctx.textAlign = "center";
+                ctx.fillStyle = "black";
+                ctx.fillText("Controls", 446,196);
+                ctx.font = "120px VT323";
+                ctx.textAlign = "center";
+                ctx.fillStyle = "white";
+                ctx.fillText("Controls", 450, 200);
+                
+                ctx.font = "50px VT323";
+                ctx.textAlign = "center";
+                ctx.fillStyle = "black";
+                ctx.fillText("W: Jump", 450, 290);
+                ctx.fillText("A: Left", 450, 370);
+                ctx.fillText("S: Down (in air)", 450, 450);
+                ctx.fillText("D: Right", 450, 530);
+                ctx.fillText("Mouse: Aim Ice Cream Gun", 450, 610);
+                ctx.fillText("Space: Shoot", 450, 690);
+                ctx.fillText("Double Jump: Aim Gun Down + Space", 450, 770);
+                
+                settHomeBtn.detectMouse();
+                settHomeBtn.update();
+            }
+            var equipped = ["purple", "#FFCCCB", "#FFCCCB", "#FFCCCB", "#FFCCCB"];
+            var selectX = 0;
+            var selectY = 0;
+            var textX = -100;
+            var textY = -100;
+            var msg = "";
+            function customScreen(){
+                ctx.imageSmoothingEnabled = false;
+                ctx.drawImage(beach, 0, 0, 900, 900);
+                
+                ctx.font = "120px VT323";
+                ctx.textAlign = "center";
+                ctx.fillStyle = "black";
+                ctx.fillText("Customize", 446,196);
+                ctx.font = "120px VT323";
+                ctx.textAlign = "center";
+                ctx.fillStyle = "white";
+                ctx.fillText("Customize", 450, 200);
+                
+                custHomeBtn.detectMouse();
+                custHomeBtn.update();
+                
+                if(customizePosition == 1){
+                    selectX = 120;
+                    selectY = 270;
+                    ctx.drawImage(select, selectX, selectY, 60, 30);
+                }
+                if(customizePosition == 2){
+                    selectX = 420;
+                    selectY = 270;
+                    ctx.drawImage(select, selectX, selectY, 60, 30);
+                }
+                if(customizePosition == 3){
+                    selectX = 720;
+                    selectY = 270;
+                    ctx.drawImage(select, selectX, selectY, 60, 30);
+                }
+                if(customizePosition == 4){
+                    selectX = 270;
+                    selectY = 470;
+                    ctx.drawImage(select, selectX, selectY, 60, 30);
+                }
+                if(customizePosition == 5){
+                    selectX = 570;
+                    selectY = 470;
+                    ctx.drawImage(select, selectX, selectY, 60, 30);
+                }
+
+                if(equipped[0] == "purple"){
+                    gamePlayer.image = pineapple;
+                }
+                if(equipped[1] == "purple"){
+                    gamePlayer.image = bear;
+                }
+                if(equipped[2] == "purple"){
+                    gamePlayer.image = blob1;
+                }
+                if(equipped[3] == "purple"){
+                    gamePlayer.image = tpose;
+                }
+                if(equipped[4] == "purple"){
+                    gamePlayer.image = blob2;
+                }
+
+                ctx.fillStyle = equipped[0];
+                ctx.fillRect(100,300,100,100);
+                ctx.fillStyle = "black";
+                ctx.fillRect(105,305,90,90);
+                ctx.drawImage(pineapple, 110, 310);
+                if(equipped[0] == "purple"){
+                    ctx.fillStyle = equipped[0];
+                    ctx.font = "40px VT323";
+                    ctx.fillText("Equipped", 145, 440);
+                }
+                if(equipped[0] == "skyblue"){
+                    ctx.fillStyle = equipped[0];
+                    ctx.font = "40px VT323";
+                    ctx.fillText("Not Equipped", 145, 440);
+                }
+
+                ctx.fillStyle = equipped[1];
+                ctx.fillRect(400,300,100,100);
+                ctx.fillStyle = "black";
+                ctx.fillRect(405,305,90,90);
+                ctx.drawImage(bear, 410, 310);
+                if(equipped[1] == "#FFCCCB" && gamePlayer.coins < 20){
+                    ctx.fillStyle = equipped[1];
+                    ctx.font = "40px VT323";
+                    ctx.fillText(gamePlayer.coins + "/20 coins", 445, 440);
+                }
+                if(gamePlayer.coins >=20 && equipped[1] == "#FFCCCB"){
+                    equipped[1] = "forestgreen";
+                    ctx.fillStyle = equipped[1];
+                    ctx.font = "40px VT323";
+                    ctx.fillText(gamePlayer.coins + "/20 coins", 445, 440);
+                }
+                if(equipped[1] == "purple"){
+                    ctx.fillStyle = equipped[1];
+                    ctx.font = "40px VT323";
+                    ctx.fillText("Equipped", 445, 440);
+                }
+                if(equipped[1] == "skyblue"){
+                    ctx.fillStyle = equipped[1];
+                    ctx.font = "40px VT323";
+                    ctx.fillText("Not Equipped", 445, 440);
+                }
+
+                ctx.fillStyle = equipped[2];
+                ctx.fillRect(700,300,100,100);
+                ctx.fillStyle = "black";
+                ctx.fillRect(705,305,90,90);
+                ctx.drawImage(blob1, 710, 310);
+                if(equipped[2] == "#FFCCCB" && gamePlayer.coins < 50){
+                    ctx.fillStyle = equipped[2];
+                    ctx.font = "40px VT323";
+                    ctx.fillText(gamePlayer.coins + "/50 coins", 745, 440);
+                }
+                if(gamePlayer.coins >=50 && equipped[2] == "#FFCCCB"){
+                    equipped[2] = "forestgreen";
+                    ctx.fillStyle = equipped[2];
+                    ctx.font = "40px VT323";
+                    ctx.fillText(gamePlayer.coins + "/50 coins", 745, 440);
+                }
+                if(equipped[2] == "purple"){
+                    ctx.fillStyle = equipped[2];
+                    ctx.font = "40px VT323";
+                    ctx.fillText("Equipped", 745, 440);
+                }
+                if(equipped[2] == "skyblue"){
+                    ctx.fillStyle = equipped[2];
+                    ctx.font = "40px VT323";
+                    ctx.fillText("Not Equipped", 745, 440);
+                }
+
+                ctx.fillStyle = equipped[3];
+                ctx.fillRect(250,500,100,100);
+                ctx.fillStyle = "black";
+                ctx.fillRect(255,505,90,90);
+                ctx.drawImage(tpose, 260, 510);
+                if(equipped[3] == "#FFCCCB" && gamePlayer.coins < 100){
+                    ctx.fillStyle = equipped[3];
+                    ctx.font = "40px VT323";
+                    ctx.fillText(gamePlayer.coins + "/100 coins", 295, 640);
+                }
+                if(gamePlayer.coins >=100 && equipped[3] == "#FFCCCB"){
+                    equipped[3] = "forestgreen";
+                    ctx.fillStyle = equipped[3];
+                    ctx.font = "40px VT323";
+                    ctx.fillText(gamePlayer.coins + "/100 coins", 295, 640);
+                }
+                if(equipped[3] == "purple"){
+                    ctx.fillStyle = equipped[3];
+                    ctx.font = "40px VT323";
+                    ctx.fillText("Equipped", 295, 640);
+                }
+                if(equipped[3] == "skyblue"){
+                    ctx.fillStyle = equipped[3];
+                    ctx.font = "40px VT323";
+                    ctx.fillText("Not Equipped", 295, 640);
+                }
+
+                ctx.fillStyle = equipped[4];
+                ctx.fillRect(550,500,100,100);
+                ctx.fillStyle = "black";
+                ctx.fillRect(555,505,90,90);
+                ctx.drawImage(blob2, 560, 510);
+                if(equipped[4] == "#FFCCCB" && gamePlayer.coins < 1000 && wins < 100){
+                    ctx.fillStyle = equipped[4];
+                    ctx.font = "40px VT323";
+                    ctx.fillText(gamePlayer.coins + "/1000 coins", 595, 640);
+                    ctx.fillText(wins + "/100 wins", 595, 690);
+                }
+                if(gamePlayer.coins >=1000 && wins >= 100 && equipped[4] == "#FFCCCB"){
+                    equipped[4] = "forestgreen";
+                    ctx.fillStyle = equipped[4];
+                    ctx.font = "40px VT323";
+                    ctx.fillText(gamePlayer.coins + "/1000 coins", 595, 640);
+                    ctx.fillText(wins + "/100 wins", 595, 690);
+                }
+                if(equipped[4] == "purple"){
+                    ctx.fillStyle = equipped[4];
+                    ctx.font = "40px VT323";
+                    ctx.fillText("Equipped", 595, 640);
+                }
+                if(equipped[4] == "skyblue"){
+                    ctx.fillStyle = equipped[4];
+                    ctx.font = "40px VT323";
+                    ctx.fillText("Not Equipped", 595, 640);
+                }
+
+                ctx.fillStyle = "black";
+                ctx.drawImage(coin, 12, 12, 50, 50);
+                ctx.fillText(gamePlayer.coins, 100, 50);
+
+                ctx.textAlign = "center";
+                widthText = ctx.measureText(msg).width + 10;
+                ctx.fillStyle = "black";
+                ctx.fillRect(textX - (widthText/2), textY - 30, widthText, 40);
+                ctx.fillStyle = "white";
+                ctx.fillText(msg, textX, textY);
+
+                ctx.textAlign = "left";
+                ctx.fillStyle = "black";
+                ctx.fillText("Use the LEFT and RIGHT arrow keys to", 300, 780);
+                ctx.fillText("alternate between the costumes!", 300, 810);
+                ctx.fillText("Once ready, Click E to unlock or", 300, 860);
+                ctx.fillText("equip them!", 300, 890);
+            }
+            function round(){
+                if(start == false){
+                    barrelLocation();
+                    enemybarrelLocation();
+                
+                    background(0, 0, 900, 900);
+                    leftPlatform.update();
+                    rightPlatform.update();
+                    midPlatform.update();
+                    
+                    gamePlayer.update();
+                    gameEnemy.update();
+                }
+                if(start == true){
+                    barrelLocation();
+                    enemybarrelLocation();
+                
+                    background(0, 0, 900, 900);
+                    leftPlatform.update();
+                    rightPlatform.update();
+                    midPlatform.update();
+                    
+                    gamePlayer.update();
+                    gameEnemy.update();
+                    gamePlayer.movement();
+                    gamePlayer.detectPlatforms();
+
+                    gameEnemy.movement();
+                    gameEnemy.detectPlatforms();
+                    gameEnemy.healthBar();
+
+                    if(gamePlayer.ammo <= 10 || gameEnemy.ammo <= 10){
+                        ammoBox.update();
+                        ammoBox.detectPlatforms();
+                        ammoBox.detect();
+                    }
+                    if(startCount % 10 == 1){
+                        coinBox.deploy = true;
+                    }
+                    if(coinBox.deploy == true){
+                        coinBox.update();
+                        coinBox.detectPlatforms();
+                        coinBox.detect();
+                    }
+
+                    playerGun.update();
+                    enemyGun.update();
+
+                    UI();
+                    for(var i = 0; i < bulletList.length; i++){
+                        var int2 = i + 1;
+                        var str2 = "bullet" + int2;
+                        window[str2].detect();
+                        window[str2].update();
+                    }
+                    for(var a = 0; a < ebulletList.length; a++){
+                        var eint2 = a + 1;
+                        var estr2 = "ebullet" + eint2;
+                        window[estr2].detect();
+                        window[estr2].update();
+                    }   
+                }
+                ctx.fillStyle = "black";
+                ctx.font = "300px VT323";
+                ctx.textAlign = "center"
+                ctx.fillText(startMsg, 450, 450);
+                
+                if(gamePlayer.health <= 0){
+                    endGame("player");
+                }
+                if(gameEnemy.health <= 0){
+                    endGame("enemy");
+                }
+            }
+            function resetValues(){
+                gamePlayer.x = 225-40;
+                gamePlayer.y = 820;
+                gameEnemy.x = 450+225+40;
+                gameEnemy.y = 820;
+                gamePlayer.ammo = 30;
+                gameEnemy.ammo = 30;
+                for(var i = 0; i < bulletList.length; i++){
+                    var int2 = i + 1;
+                    var str2 = "bullet" + int2;
+                    window[str2] = undefined;
+                    delete(window[str2]);
+                }
+                for(var a = 0; a < ebulletList.length; a++){
+                    var eint2 = a + 1;
+                    var estr2 = "ebullet" + eint2;
+                    window[estr2] = undefined;
+                    delete(window[estr2]);
+                }
+                bulletList = [];
+                ebulletList = [];
+                gamePlayer.health = 100;
+                gameEnemy.health = 100;
+                startCount = 0;
+                start = false;
+            }
+            
+            //key controls
+            var keys = {
+                w: 87,
+                s: 83,
+                d: 68,
+                a: 65,
+                space: 32,
+                ctr: 17,
+                left: 37,
+                right: 39,
+                e: 69
+            }
+            var bulletList = [];
+            var icColorN = Math.floor(Math.random() * 2)+1;
+            var icColor = "yellow";
+            var ebulletList = [];
+            var eicColorN = Math.floor(Math.random() * 2)+1;
+            var eicColor = "yellow";
+            var customizePosition = 1;
+            document.addEventListener("keydown", (e) => {
+                if(e.keyCode == keys.s){
+                    gamePlayer.speedY += 1;
+                }
+                if(e.keyCode == keys.d){
+                    gamePlayer.speedX = 3;
+                }
+                if(e.keyCode == keys.a){
+                    gamePlayer.speedX = -3;
+                }
+                if(e.keyCode == keys.w && gamePlayer.grounded == true){
+                    gamePlayer.grounded = false;
+                    gamePlayer.speedY = -6;
+                }
+                if(e.keyCode == keys.space && gamePlayer.ammo > 0){
+                    var int = bulletList.length + 1;
+                    var str = "bullet" + int;
+                    icColorN = Math.floor(Math.random() * 3);
+                    if(icColorN == 0){
+                        icColor = "yellow";
+                    }
+                    if(icColorN == 1){
+                        icColor = "#14a3c7";
+                    }
+                    if(icColorN == 2){
+                        icColor = "#B399D4";
+                    }
+                    window[str] = new bullet(newX2, newY2, 5, icColor, mousePos.x, mousePos.y);
+                    bulletList.push(window[str]);
+                    gamePlayer.ammo -= 1;
+                    bulletsShot += 1;
+                }
+                if(e.keyCode == keys.space && gamePlayer.grounded == false && playerGun.angle < 2 && playerGun.angle > 1 && gamePlayer.jumpCount < 3 && gamePlayer.ammo > 0){
+                    gamePlayer.jumpCount += 1;
+                    gamePlayer.speedY -= 2;
+                }
+                if(customize == true){
+                    if(e.keyCode == keys.left){
+                        customizePosition -= 1;
+                        if(customizePosition == 0){
+                            customizePosition = 5;
+                        }
+                    }
+                    if(e.keyCode == keys.right){
+                        customizePosition += 1;
+                        if(customizePosition == 6){
+                            customizePosition = 1;
+                        }
+                    }
+                    if(e.keyCode == keys.e){
+                        if(equipped[customizePosition-1] == "purple"){
+                            textX = selectX + 30;
+                            textY = selectY - 20;
+                            msg = "Already Equipped!";
+                        }
+                        if(equipped[customizePosition-1] == "skyblue"){
+                            for(var i = 0; i < 4; i++){
+                                if(equipped[i] == "purple"){
+                                    equipped[i] = "skyblue";
+                                }
+                            }
+                            equipped[customizePosition-1] = "purple";
+                            textX = selectX + 30;
+                            textY = selectY - 20;
+                            msg = "Equipped!";
+                        }
+                        if(equipped[customizePosition-1] == "forestgreen"){
+                            for(var i = 0; i < 4; i++){
+                                if(equipped[i] == "purple"){
+                                    equipped[i] = "skyblue";
+                                }
+                            }
+                            equipped[customizePosition-1] = "purple";
+                            textX = selectX + 30;
+                            textY = selectY - 20;
+                            msg = "Unlocked!";
+                            if(customizePosition == 2){gamePlayer.coins -= 20}
+                            if(customizePosition == 3){gamePlayer.coins -= 50}
+                            if(customizePosition == 4){gamePlayer.coins -= 100}
+                            if(customizePosition == 5){gamePlayer.coins -= 1000}
+                        }
+                        if(equipped[customizePosition-1] == "#FFCCCB"){
+                            textX = selectX + 30;
+                            textY = selectY - 20;
+                            msg = "Cannot Unlock Yet!";
+                        }
+                    }
+                }
+            }, false);
+            document.addEventListener("keyup", (e) => {
+                if(e.keyCode == keys.d){
+                    gamePlayer.speedX = 0;
+                }
+                if(e.keyCode == keys.a){
+                    gamePlayer.speedX = 0;
+                }
+            }, false);
+            document.addEventListener("click", function(e){
+                if(homeBtn.inside == true){
+                    if(losers == "player"){
+                        loses += 1;
+                    }
+                    if(losers == "enemy"){
+                        wins += 1;
+                    }
+                    resetValues();
+                    gameStart = false;
+                    homeBtn.inside = false;
+                }
+                if(playBtn.inside == true){
+                    gameStart = true;
+                    playBtn.inside = false;
+                }
+                if(statBtn.inside == true){
+                    stats = true;
+                    settings = false;
+                    customize = false;
+                    statBtn.inside = false;
+                }
+                if(statHomeBtn.inside == true){
+                    gameStart = false;
+                    stats = false;
+                    statHomeBtn.inside = false;
+                }
+                if(settBtn.inside == true){
+                    settings = true;
+                    stats = false;
+                    customize = false;
+                    settBtn.inside = false;
+                }
+                if(settHomeBtn.inside == true){
+                    gameStart = false;
+                    settings = false;
+                    settHomeBtn.inside = false;
+                }
+                if(custBtn.inside == true){
+                    customize = true;
+                    stats = false;
+                    settings = false;
+                    custBtn.inside = false;
+                }
+                if(custHomeBtn.inside == true){
+                    gameStart = false;
+                    customize = false;
+                    custHomeBtn.inside = false;
+                }
+            }, false);
+            
+            //drawloop
+            var startCount = 0;
+            var start = false;
+            var startMsg = "";
+            var gameStart = false;
+            var startInterval = setInterval(function(){
+                if(gameStart == true){
+                    startCount += 1;
+                    if(startCount == 1){
+                        startMsg = "3";
+                    }
+                    if(startCount == 2){
+                        startMsg = "2";
+                    }
+                    if(startCount == 3){
+                        startMsg = "1";
+                    }
+                    if(startCount == 4){
+                        startMsg = "FIGHT!";
+                        start = true;
+                    }
+                    if(startCount >= 5){
+                        startMsg = "";
+                    }   
+                }
+            }, 1000);
+            var stats = false;
+            var settings = false;
+            var customize = false; 
+            var drawLoop = setInterval(function(){
+                if(gameStart == false){
+                    mainScreen();
+                }
+                if(gameStart == true){
+                    round();   
+                }
+                if(stats == true){
+                    statScreen();
+                }
+                if(settings == true){
+                    settingScreen();
+                }
+                if(customize == true){
+                    customScreen();
+                }
+            }, 10);
+        </script>
+    </body>
+</html>
